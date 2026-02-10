@@ -72,20 +72,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signInSubUser: async (adminEmail: string, username: string, password: string) => {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sub-user-auth/authenticate`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          admin_email: adminEmail,
-          username,
-          password,
-        }),
-      }
-    )
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/sub-user-auth/authenticate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({
+        admin_email: adminEmail,
+        username,
+        password,
+      }),
+    })
 
     const result = await response.json()
 
