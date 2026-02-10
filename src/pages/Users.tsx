@@ -78,11 +78,13 @@ export default function Users() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Session non trouvée')
 
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sub-user-auth/create`
 
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
+          apikey: anonKey,
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
@@ -144,6 +146,7 @@ export default function Users() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Session non trouvée')
 
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sub-user-auth/update`
 
       const body: any = {
@@ -160,6 +163,7 @@ export default function Users() {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
+          apikey: anonKey,
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
