@@ -41,19 +41,6 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 }
 
 
-function decodeJwtPayload(token: string): { sub?: string } | null {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-    const json = atob(padded);
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -92,12 +79,11 @@ Deno.serve(async (req: Request) => {
       }
 
       const token = authHeader.replace('Bearer ', '');
-      const payload = decodeJwtPayload(token);
-      const userId = payload?.sub;
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-      if (!userId) {
+      if (authError || !user) {
         return new Response(
-          JSON.stringify({ error: 'Non autoris?' }),
+          JSON.stringify({ error: 'Unauthorized' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -105,12 +91,12 @@ Deno.serve(async (req: Request) => {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('role')
-        .eq('id', userId)
+        .eq('id', user.id)
         .maybeSingle();
 
       if (profile?.role !== 'admin') {
         return new Response(
-          JSON.stringify({ error: 'Acc?s r?serv? aux administrateurs' }),
+          JSON.stringify({ error: 'Admins only' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -128,7 +114,7 @@ Deno.serve(async (req: Request) => {
       const { data: existing } = await supabaseAdmin
         .from('sub_users')
         .select('id')
-        .eq('parent_user_id', userId)
+        .eq('parent_user_id', user.id)
         .eq('username', username)
         .maybeSingle();
 
@@ -144,7 +130,7 @@ Deno.serve(async (req: Request) => {
       const { data: subUser, error: insertError } = await supabaseAdmin
         .from('sub_users')
         .insert({
-          parent_user_id: userId,
+          parent_user_id: user.id,
           username,
           password_hash,
           full_name,
@@ -178,10 +164,9 @@ Deno.serve(async (req: Request) => {
       }
 
       const token = authHeader.replace('Bearer ', '');
-      const payload = decodeJwtPayload(token);
-      const userId = payload?.sub;
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-      if (!userId) {
+      if (authError || !user) {
         return new Response(
           JSON.stringify({ error: 'Non autoris?' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -191,7 +176,7 @@ Deno.serve(async (req: Request) => {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('role')
-        .eq('id', userId)
+        .eq('id', user.id)
         .maybeSingle();
 
       if (profile?.role !== 'admin') {
@@ -217,7 +202,7 @@ Deno.serve(async (req: Request) => {
         .eq('id', sub_user_id)
         .maybeSingle();
 
-      if (!subUser || subUser.parent_user_id !== userId) {
+      if (!subUser || subUser.parent_user_id !== user.id) {
         return new Response(
           JSON.stringify({ error: 'Sous-utilisateur non trouvé ou non autorisé' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -228,7 +213,7 @@ Deno.serve(async (req: Request) => {
         const { data: existing } = await supabaseAdmin
           .from('sub_users')
           .select('id')
-          .eq('parent_user_id', userId)
+          .eq('parent_user_id', user.id)
           .eq('username', username)
           .neq('id', sub_user_id)
           .maybeSingle();
