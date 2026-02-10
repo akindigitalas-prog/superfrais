@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,7 +11,6 @@ interface CreateSubUserRequest {
   username: string;
   password: string;
   full_name: string;
-  role?: string;
 }
 
 interface UpdateSubUserRequest {
@@ -18,7 +18,6 @@ interface UpdateSubUserRequest {
   username?: string;
   password?: string;
   full_name?: string;
-  role?: string;
 }
 
 interface AuthenticateRequest {
@@ -27,7 +26,15 @@ interface AuthenticateRequest {
   password: string;
 }
 
-async function hashPassword(password: string): Promise<string> {
+const BCRYPT_SALT_ROUNDS = 10;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isBcryptHash(hash: string): boolean {
+  return hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$');
+}
+
+async function legacyHashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -35,9 +42,17 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+}
+
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const passwordHash = await hashPassword(password);
-  return passwordHash === hash;
+  if (isBcryptHash(hash)) {
+    return bcrypt.compareSync(password, hash);
+  }
+
+  const legacyHash = await legacyHashPassword(password);
+  return legacyHash === hash;
 }
 
 
@@ -102,7 +117,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const body: CreateSubUserRequest = await req.json();
-      const { username, password, full_name, role = 'employee' } = body;
+      const { username, password, full_name } = body;
 
       if (!username || !password || !full_name) {
         return new Response(
@@ -134,7 +149,7 @@ Deno.serve(async (req: Request) => {
           username,
           password_hash,
           full_name,
-          role,
+          role: 'employee',
           is_active: true,
         })
         .select()
@@ -148,8 +163,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const { password_hash: _passwordHash, ...safeSubUser } = subUser;
+
       return new Response(
-        JSON.stringify({ data: subUser }),
+        JSON.stringify({ data: safeSubUser }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -187,7 +204,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const body: UpdateSubUserRequest = await req.json();
-      const { sub_user_id, username, password, full_name, role } = body;
+      const { sub_user_id, username, password, full_name } = body;
 
       if (!sub_user_id) {
         return new Response(
@@ -229,7 +246,6 @@ Deno.serve(async (req: Request) => {
       const updateData: any = {};
       if (username) updateData.username = username;
       if (full_name) updateData.full_name = full_name;
-      if (role) updateData.role = role;
       if (password) updateData.password_hash = await hashPassword(password);
       updateData.updated_at = new Date().toISOString();
 
@@ -248,8 +264,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const { password_hash: _passwordHash, ...safeUpdated } = updated;
+
       return new Response(
-        JSON.stringify({ data: updated }),
+        JSON.stringify({ data: safeUpdated }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -277,6 +295,7 @@ Deno.serve(async (req: Request) => {
       const admin = adminUser.users.find(u => u.email === admin_email);
 
       if (!admin) {
+        await sleep(700);
         return new Response(
           JSON.stringify({ error: 'Email admin introuvable' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -296,6 +315,7 @@ Deno.serve(async (req: Request) => {
         });
 
         if (signInError) {
+          await sleep(700);
           return new Response(
             JSON.stringify({ error: 'Mot de passe incorrect' }),
             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -324,6 +344,7 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (!subUser) {
+        await sleep(700);
         return new Response(
           JSON.stringify({ error: 'Utilisateur introuvable' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -333,10 +354,19 @@ Deno.serve(async (req: Request) => {
       const isPasswordValid = await verifyPassword(password, subUser.password_hash);
 
       if (!isPasswordValid) {
+        await sleep(700);
         return new Response(
           JSON.stringify({ error: 'Mot de passe incorrect' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      if (!isBcryptHash(subUser.password_hash)) {
+        const newHash = await hashPassword(password);
+        await supabaseAdmin
+          .from('sub_users')
+          .update({ password_hash: newHash, updated_at: new Date().toISOString() })
+          .eq('id', subUser.id);
       }
 
       await supabaseAdmin

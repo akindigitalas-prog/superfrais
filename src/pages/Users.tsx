@@ -36,7 +36,6 @@ export default function Users() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<'admin' | 'employee'>('employee')
   const [email, setEmail] = useState('')
 
   useEffect(() => {
@@ -92,7 +91,6 @@ export default function Users() {
           username,
           password,
           full_name: fullName,
-          role,
         }),
       })
 
@@ -132,7 +130,6 @@ export default function Users() {
     setEditingSubUser(subUser)
     setUsername(subUser.username)
     setFullName(subUser.full_name)
-    setRole(subUser.role as 'admin' | 'employee')
     setPassword('')
     setShowEditForm(true)
   }
@@ -153,7 +150,6 @@ export default function Users() {
         sub_user_id: editingSubUser.id,
         username,
         full_name: fullName,
-        role,
       }
 
       if (password) {
@@ -259,7 +255,6 @@ export default function Users() {
     setUsername('')
     setPassword('')
     setFullName('')
-    setRole('employee')
     setEmail('')
   }
 
@@ -489,19 +484,6 @@ export default function Users() {
                   minLength={6}
                 />
               </div>
-
-              <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                <label className="label">Rôle</label>
-                <select
-                  className="input"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
-                >
-                  <option value="employee">Employé</option>
-                  <option value="admin">Administrateur</option>
-                </select>
-              </div>
-
               <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
                   <FiPlus size={20} />
@@ -577,19 +559,6 @@ export default function Users() {
                   Laisser vide pour conserver le mot de passe actuel
                 </p>
               </div>
-
-              <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                <label className="label">Rôle</label>
-                <select
-                  className="input"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
-                >
-                  <option value="employee">Employé</option>
-                  <option value="admin">Administrateur</option>
-                </select>
-              </div>
-
               <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
                   <FiEdit size={20} />
