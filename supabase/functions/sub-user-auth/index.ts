@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('role')
+        .select('role, tenant_id')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -113,6 +113,13 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({ error: 'Admins only' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!profile?.tenant_id) {
+        return new Response(
+          JSON.stringify({ error: 'Tenant introuvable pour cet administrateur' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -146,6 +153,7 @@ Deno.serve(async (req: Request) => {
         .from('sub_users')
         .insert({
           parent_user_id: user.id,
+          tenant_id: profile.tenant_id,
           username,
           password_hash,
           full_name,

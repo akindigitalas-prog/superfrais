@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY")
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -47,12 +47,16 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("role")
+      .select("role, tenant_id")
       .eq("id", user.id)
       .single()
 
     if (profile?.role !== 'admin') {
       throw new Error("Accès réservé aux administrateurs")
+    }
+
+    if (!profile?.tenant_id) {
+      throw new Error("Tenant introuvable pour cet administrateur")
     }
 
     const { email, password, fullName, role }: CreateUserRequest = await req.json()
@@ -76,6 +80,7 @@ Deno.serve(async (req: Request) => {
           email,
           full_name: fullName,
           role,
+          tenant_id: profile.tenant_id,
         })
 
       if (profileError) throw profileError
