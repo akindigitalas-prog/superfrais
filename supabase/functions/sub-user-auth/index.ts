@@ -40,6 +40,21 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
   return passwordHash === hash;
 }
 
+
+function decodeJwtPayload(token: string): { sub?: string } | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -77,12 +92,26 @@ Deno.serve(async (req: Request) => {
       }
 
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      const payload = decodeJwtPayload(token);
+      const userId = payload?.sub;
 
-      if (authError || !user) {
+      if (!userId) {
         return new Response(
-          JSON.stringify({ error: 'Non autorisé' }),
+          JSON.stringify({ error: 'Non autoris?' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.role !== 'admin') {
+        return new Response(
+          JSON.stringify({ error: 'Acc?s r?serv? aux administrateurs' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -99,7 +128,7 @@ Deno.serve(async (req: Request) => {
       const { data: existing } = await supabaseAdmin
         .from('sub_users')
         .select('id')
-        .eq('parent_user_id', user.id)
+        .eq('parent_user_id', userId)
         .eq('username', username)
         .maybeSingle();
 
@@ -115,7 +144,7 @@ Deno.serve(async (req: Request) => {
       const { data: subUser, error: insertError } = await supabaseAdmin
         .from('sub_users')
         .insert({
-          parent_user_id: user.id,
+          parent_user_id: userId,
           username,
           password_hash,
           full_name,
@@ -149,12 +178,26 @@ Deno.serve(async (req: Request) => {
       }
 
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      const payload = decodeJwtPayload(token);
+      const userId = payload?.sub;
 
-      if (authError || !user) {
+      if (!userId) {
         return new Response(
-          JSON.stringify({ error: 'Non autorisé' }),
+          JSON.stringify({ error: 'Non autoris?' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.role !== 'admin') {
+        return new Response(
+          JSON.stringify({ error: 'Acc?s r?serv? aux administrateurs' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -174,7 +217,7 @@ Deno.serve(async (req: Request) => {
         .eq('id', sub_user_id)
         .maybeSingle();
 
-      if (!subUser || subUser.parent_user_id !== user.id) {
+      if (!subUser || subUser.parent_user_id !== userId) {
         return new Response(
           JSON.stringify({ error: 'Sous-utilisateur non trouvé ou non autorisé' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -185,7 +228,7 @@ Deno.serve(async (req: Request) => {
         const { data: existing } = await supabaseAdmin
           .from('sub_users')
           .select('id')
-          .eq('parent_user_id', user.id)
+          .eq('parent_user_id', userId)
           .eq('username', username)
           .neq('id', sub_user_id)
           .maybeSingle();
