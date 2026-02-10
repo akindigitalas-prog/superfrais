@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur d'Icônes PWA</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      margin-bottom: 30px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-input-label {
+      display: block;
+      padding: 20px;
+      background: #f8f9fa;
+      border: 2px dashed #ddd;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .file-input-label:hover {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+
+    .file-input-label.active {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .preview {
+      display: none;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .preview.show {
+      display: block;
+    }
+
+    .preview h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .preview-images {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .preview-item {
+      text-align: center;
+    }
+
+    .preview-item img {
+      border: 2px solid #eee;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    .preview-item p {
+      color: #666;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .success {
+      background: #10b981;
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .success.show {
+      display: block;
+    }
+
+    .instructions {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #555;
+    }
+
+    .instructions h3 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .instructions ol {
+      margin-left: 20px;
+    }
+
+    .instructions li {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Générateur d'Icônes PWA</h1>
+    <p class="subtitle">Convertissez votre icône SVG en PNG pour votre application</p>
+
+    <div class="file-input-wrapper">
+      <input type="file" id="fileInput" accept=".svg">
+      <label for="fileInput" class="file-input-label" id="fileLabel">
+        📁 Cliquez pour sélectionner icon.svg
+      </label>
+    </div>
+
+    <button id="generateBtn" disabled>Générer les icônes PNG</button>
+
+    <div class="preview" id="preview">
+      <h3>Aperçu</h3>
+      <div class="preview-images">
+        <div class="preview-item">
+          <canvas id="canvas192" width="192" height="192"></canvas>
+          <p>192 x 192 pixels</p>
+        </div>
+        <div class="preview-item">
+          <canvas id="canvas512" width="512" height="512"></canvas>
+          <p>512 x 512 pixels</p>
+        </div>
+      </div>
+    </div>
+
+    <button id="downloadBtn" style="display: none;">📥 Télécharger les icônes</button>
+
+    <div class="success" id="success">
+      ✅ Icônes générées avec succès! Placez-les dans le dossier public/
+    </div>
+
+    <div class="instructions">
+      <h3>📝 Instructions</h3>
+      <ol>
+        <li>Sélectionnez le fichier <code>public/icon.svg</code></li>
+        <li>Cliquez sur "Générer les icônes PNG"</li>
+        <li>Téléchargez <code>icon-192.png</code></li>
+        <li>Téléchargez <code>icon-512.png</code></li>
+        <li>Placez les 2 fichiers dans le dossier <code>public/</code></li>
+        <li>Lancez <code>npm run build</code></li>
+        <li>Déployez sur Netlify! 🚀</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fileLabel = document.getElementById('fileLabel');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const preview = document.getElementById('preview');
+    const success = document.getElementById('success');
+    const canvas192 = document.getElementById('canvas192');
+    const canvas512 = document.getElementById('canvas512');
+
+    let svgData = null;
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        fileLabel.textContent = `✅ ${file.name}`;
+        fileLabel.classList.add('active');
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          svgData = e.target.result;
+          generateBtn.disabled = false;
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    generateBtn.addEventListener('click', () => {
+      if (!svgData) return;
+
+      generateBtn.disabled = true;
+      generateBtn.textContent = '⏳ Génération en cours...';
+
+      setTimeout(() => {
+        generateIcon(192, canvas192);
+        generateIcon(512, canvas512);
+
+        preview.classList.add('show');
+        downloadBtn.style.display = 'block';
+        success.classList.add('show');
+
+        generateBtn.textContent = '✅ Icônes générées!';
+        generateBtn.disabled = false;
+      }, 500);
+    });
+
+    function generateIcon(size, canvas) {
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        ctx.clearRect(0, 0, size, size);
+        ctx.drawImage(img, 0, 0, size, size);
+      };
+
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      img.src = url;
+    }
+
+    downloadBtn.addEventListener('click', () => {
+      downloadCanvas(canvas192, 'icon-192.png');
+      setTimeout(() => {
+        downloadCanvas(canvas512, 'icon-512.png');
+      }, 500);
+    });
+
+    function downloadCanvas(canvas, filename) {
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    }
+  </script>
+</body>
+</html>
