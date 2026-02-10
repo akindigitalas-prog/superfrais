@@ -60,6 +60,7 @@ export default function CashCount() {
   const [coins001, setCoins001] = useState(0)
   const [previousFloat, setPreviousFloat] = useState(0)
   const [newFloat, setNewFloat] = useState(0)
+  const [countDate, setCountDate] = useState(format(new Date(), 'yyyy-MM-dd'))
 
   useEffect(() => {
     fetchCashCounts()
@@ -153,11 +154,12 @@ export default function CashCount() {
       }
 
       const today = format(new Date(), 'yyyy-MM-dd')
+      const countDateValue = countDate || today
 
       const { error } = await supabase
         .from('cash_counts')
         .insert({
-          count_date: today,
+          count_date: countDateValue,
           z_report_photo_url: photoUrl,
           z_report_total: zReportTotal,
           bills_500: bills500,
@@ -213,6 +215,7 @@ export default function CashCount() {
     setCoins002(0)
     setCoins001(0)
     setNewFloat(0)
+    setCountDate(format(new Date(), 'yyyy-MM-dd'))
   }
 
   if (loading) {
@@ -354,6 +357,20 @@ export default function CashCount() {
             </h2>
 
             <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                <label className="label" style={{ fontSize: 16, fontWeight: 600 }}>
+                  Date du comptage
+                </label>
+                <input
+                  type="date"
+                  className="input"
+                  value={countDate}
+                  onChange={(e) => setCountDate(e.target.value)}
+                />
+                <p style={{ fontSize: 13, color: 'var(--gray-600)', marginTop: 8 }}>
+                  Si aucune date n'est choisie, la date du jour sera utilisÃ©e.
+                </p>
+              </div>
               <div style={{
                 marginBottom: 'var(--spacing-xl)',
                 padding: 'var(--spacing-lg)',
