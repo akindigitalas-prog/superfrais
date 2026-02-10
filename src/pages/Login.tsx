@@ -62,27 +62,35 @@ export default function Login() {
     setLoading(true)
 
     try {
+      const normalizedUsername = (username || fullName)
+        .toLowerCase()
+        .replace(/\s+/g, '')
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: fullName,
+            username: normalizedUsername,
+          },
+        },
       })
 
       if (signUpError) throw signUpError
 
       if (data.user) {
+        await signIn(email, password)
+
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: data.user.id,
-            email,
+          .update({
             full_name: fullName,
-            username: username || fullName.toLowerCase().replace(/\s+/g, ''),
-            role: 'employee',
+            username: normalizedUsername,
           })
+          .eq('id', data.user.id)
 
         if (profileError) throw profileError
-
-        await signIn(email, password)
       }
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création du compte')

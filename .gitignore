@@ -6,3 +6,5 @@ dist/
 .DS_Store
 .vscode/
 *.log
+exports/
+supabase/.temp/
