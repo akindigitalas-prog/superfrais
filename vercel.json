@@ -1,5 +1,1 @@
-@'
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
-}
-'@ | Out-File -Encoding UTF8 vercel.json
+﻿{"rewrites":[{"source":"/(.*)","destination":"/"}]}
