@@ -49,9 +49,19 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const serviceRoleKey =
+      Deno.env.get('SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!serviceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: 'Missing SERVICE_ROLE_KEY secret' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      serviceRoleKey
     );
 
     const url = new URL(req.url);
